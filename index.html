@@ -444,13 +444,13 @@ const PRODUCT={
   oauth:[],                           /* e.g. ["google","azure"] once those providers are switched on in Supabase Auth */
   staleDays:45,                       /* balances older than this prompt editors to upload a new close-out */
 };
-const SUPABASE_URL="https://fekacoesxmgsoyarwkao.supabase.co";
-const SUPABASE_KEY="sb_publishable_jCO7iHzeWLkDsnchTEnbvQ_wvCCx9dV";
+const SUPABASE_URL="https://agtwrjgmojfvxgfjviys.supabase.co";
+const SUPABASE_KEY="sb_publishable_bSlmFRq3S5kZK9_2Eh_BhA_FX2nAPF9";
 const SB_TABLE="cip_tenant";        /* one row per district, id = tenant id */
 const SB_MEMBERS="cip_member";      /* who may write which tenant */
 const SB_LEGACY="plan";
 const SB_REQUESTS="cip_access_request"; /* edit-access requests an admin can approve */             /* the pre-white-label table; read once to migrate Lo-Ma */
-const BUILD="2026-09-24 refresh";
+const BUILD="2026-09-24 horizon";
 /* ====================================================================== */
 
 const SEED=JSON.parse(document.getElementById("tenant-seed").textContent);
@@ -1120,7 +1120,7 @@ function paintTopbar(C){
   $("discardbtn").hidden=!dirty;
   $("suggestbtn").hidden=!(sbConfigured()&&SB.on&&ROLE()==="viewer"&&!DOC.tenant.demo);
   const signed=!!SB.token;
-  $("signinbtn").hidden=signed||!sbConfigured()||!SB.on;
+  $("signinbtn").hidden=signed||!sbConfigured();
   $("avatar").hidden=!signed;$("avatar").textContent=(SB.email||"?")[0].toUpperCase();$("avatar").title=SB.email||"";
   const rib=$("ribbon");
   rib.hidden=!DOC.tenant.demo;
@@ -1249,7 +1249,7 @@ $("ident").onclick=()=>{
     ${star?'<button class="mi" id="dm-new">Set up a new district…</button>':""}
     <hr>${narrow?`<div class="mh" style="text-transform:none;letter-spacing:0;font-weight:400">${esc(statusInfo()[1])}</div><button class="mi" id="dm-share">Share</button><button class="mi" id="dm-present">Present</button>`:""}
     ${DOC.tenant.demo&&canSettings()?'<button class="mi" id="dm-set">Settings (demo)</button>':""}
-    ${narrow&&sbConfigured()&&SB.on&&!SB.token?'<button class="mi" id="dm-signin">Sign in</button>':""}
+    ${narrow&&sbConfigured()&&!SB.token?'<button class="mi" id="dm-signin">Sign in</button>':""}
     <button class="mi" id="dm-tour">How this works</button>`,m=>{
     m.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{const v=b.dataset.t;closeMenu();if(v===TID)return;
       if(isDirty()){showBanner("caution","<b>Unsaved changes here.</b> Switching district discards them.",[["Discard and switch",()=>switchTenant(v)]]);return;}
@@ -2595,6 +2595,9 @@ async function sbBootTenant(){
   if(SB.on&&SB.token)await sbCheckMember();
   if(SB.member)loadSuggestions();
   SB.checked=true;render();
+  /* the landing/sign-in screens depend on who is signed in: redraw them once that's known */
+  if(SCREEN==="landing")showScreen("landing");
+  else if(SCREEN==="signin"&&!SB.on&&!(($("si-email")||{}).value))showScreen("signin");
 }
 function adoptShared(row){
   const keep=viewId;
@@ -2699,6 +2702,7 @@ function signinHtml(){
   if(s.state==="expired")st=`<div class="state err"><b>That sign-in link has expired or was already used.</b> Send yourself a new one.</div>`;
   if(s.state==="error")st=`<div class="state err"><b>Couldn't send the link.</b> ${esc(s.msg)}</div>`;
   if(s.msg&&s.state==="form")st=`<div class="state warn">${esc(s.msg)}</div>`;
+  if(SB.checked&&!SB.on&&s.state!=="sent")st+=`<div class="state err"><b>Can't reach the shared plan right now.</b> ${esc(SB.note||"")} Store: ${esc(SUPABASE_URL)}</div>`;
   const oauth=(PRODUCT.oauth||[]).map(p=>`<button class="btn" data-oauth="${esc(p)}" style="margin-bottom:8px">Continue with ${p==="azure"?"Microsoft":p[0].toUpperCase()+p.slice(1)}</button>`).join("");
   return `<div class="screen"><div class="sbox">
     ${known?(d.logo?`<img class="lg" src="${esc(d.logo)}" alt="">`:`<div class="lg mono" aria-hidden="true">${esc(initials(d.short||d.name))}</div>`):""}
